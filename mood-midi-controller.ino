@@ -1,0 +1,176 @@
+#include <SoftwareSerial.h>        // Ref: https://docs.arduino.cc/learn/built-in-libraries/software-serial
+#include <MIDI.h>                  // Ref: https://github.com/FortySevenEffects/arduino_midi_library
+#include <JC_Button.h>             // Ref: https://github.com/JChristensen/JC_Button
+#include <ResponsiveAnalogRead.h>  // Ref: https://github.com/dxinteractive/ResponsiveAnalogRead
+
+
+// Define MIDI Channel and control change numbers.
+const int MIDI_CH = 2;  // MOOD MKII Default Channel
+
+const int MIDI_CC_TOGGLE_BOUNCE = 66;
+const int MIDI_CC_TOGGLE_SMOOTH = 78;
+const int MIDI_CC_MIX = 15;
+
+const int MIDI_CC_WET_TOGGLE = 103;
+const int MIDI_CC_WET_HOLD   = 105;
+const int MIDI_CC_LOOP_TOGGLE = 102;
+const int MIDI_CC_LOOP_HOLD   = 106;
+
+// Pin Definitions.
+const int PIN_TOGGLE_BOUNCE = 4;
+const int PIN_TOGGLE_SMOOTH = 5;
+const int PIN_FOOTSWITCH_WET = 6;
+const int PIN_FOOTSWITCH_LOOPER = 7;
+const int PIN_POT = A0;
+const int PIN_RX = 2;
+const int PIN_TX = 3;
+const int PIN_LED = 13;
+
+// Setup switches.
+Button toggleBounce(PIN_TOGGLE_BOUNCE);
+Button toggleSmooth(PIN_TOGGLE_SMOOTH);
+Button footSwitchWet(PIN_FOOTSWITCH_WET);
+Button footSwitchLooper(PIN_FOOTSWITCH_LOOPER);
+
+// Footswitch States.
+const unsigned long holdThresholdMs = 200;
+
+bool isWetOn = false;
+bool isWetPressing = false;
+unsigned long wetPressStartTime = 0;
+bool isWetHoldTriggered = false;
+
+bool isLooperOn = false;
+bool isLooperPressing = false;
+unsigned long looperPressStartTime = 0;
+bool isLooperHoldTriggered = false;
+
+// Setup potentiometer.
+ResponsiveAnalogRead pot(PIN_POT, true);
+
+// Setup MIDI.
+SoftwareSerial softSerial(PIN_RX, PIN_TX);
+MIDI_CREATE_INSTANCE(SoftwareSerial, softSerial, midiA);
+
+void setup() {
+  pinMode(PIN_LED, OUTPUT);
+
+  toggleBounce.begin();
+  toggleSmooth.begin();
+  footSwitchWet.begin();
+  footSwitchLooper.begin();
+
+  midiA.begin(MIDI_CH);
+  Serial.begin(9600);
+}
+
+void loop() {
+  toggleBounce.read();
+  toggleSmooth.read();
+  footSwitchWet.read();
+  footSwitchLooper.read();
+  pot.update();
+
+  // Toggle Switches.
+  if (toggleBounce.wasPressed()) {
+    midiA.sendControlChange(MIDI_CC_TOGGLE_BOUNCE, 127, MIDI_CH);
+    Serial.println("Toggle Bounce: ON");
+  }
+  if (toggleSmooth.wasPressed()) {
+    midiA.sendControlChange(MIDI_CC_TOGGLE_SMOOTH, 127, MIDI_CH);
+    Serial.println("Toggle Smooth: ON");
+  }
+
+  if (toggleBounce.wasReleased()) {
+    midiA.sendControlChange(MIDI_CC_TOGGLE_BOUNCE, 0, MIDI_CH);
+    Serial.println("Toggle Bounce: OFF");
+  }
+  if (toggleSmooth.wasReleased()) {
+    midiA.sendControlChange(MIDI_CC_TOGGLE_SMOOTH, 0, MIDI_CH);
+    Serial.println("Toggle Smooth: OFF");
+  }
+
+  // Wet Channel - Pressed.
+  if (footSwitchWet.wasPressed()) {
+    isWetPressing = true;
+    wetPressStartTime = millis();
+    isWetHoldTriggered = false;
+  }
+
+  // Wet Channel - Hold.
+  if (isWetPressing && footSwitchWet.isPressed()) {
+    if (!isWetHoldTriggered && (millis() - wetPressStartTime > holdThresholdMs)) {
+      if (isWetOn) {
+        midiA.sendControlChange(MIDI_CC_WET_HOLD, 127, MIDI_CH);
+        Serial.println("Wet Hold: ON");
+      }
+      isWetHoldTriggered = true;
+    }
+  }
+
+  // Wet Channel - Released.
+  if (footSwitchWet.wasReleased()) {
+    if (isWetOn) {
+      if (isWetHoldTriggered) {
+        midiA.sendControlChange(MIDI_CC_WET_HOLD, 0, MIDI_CH);
+        Serial.println("Wet Hold: OFF");
+      } else {
+        midiA.sendControlChange(MIDI_CC_WET_TOGGLE, 0, MIDI_CH);
+        isWetOn = false;
+        Serial.println("Wet: OFF");
+      }
+    } else {
+      midiA.sendControlChange(MIDI_CC_WET_TOGGLE, 127, MIDI_CH);
+      isWetOn = true;
+      if (isWetHoldTriggered) {
+        Serial.println("Wet: ON (from long press)");
+      } else {
+        Serial.println("Wet: ON (from short press)");
+      }
+    }
+    isWetPressing = false;
+  }
+
+  // Micro Looper - Pressed.
+  if (footSwitchLooper.wasPressed()) {
+    isLooperPressing = true;
+    looperPressStartTime = millis();
+    isLooperHoldTriggered = false;
+  }
+
+  // Micro Looper - Hold.
+  if (isLooperPressing && footSwitchLooper.isPressed()) {
+    if (!isLooperHoldTriggered && (millis() - looperPressStartTime > holdThresholdMs)) {
+      midiA.sendControlChange(MIDI_CC_LOOP_HOLD, 127, MIDI_CH);
+      Serial.println("Looper: OVERDUB ON");
+      isLooperHoldTriggered = true;
+    }
+  }
+
+  // Micro Looper - Released.
+  if (footSwitchLooper.wasReleased()) {
+    if (isLooperHoldTriggered) {
+      midiA.sendControlChange(MIDI_CC_LOOP_HOLD, 0, MIDI_CH);
+      Serial.println("Looper: OVERDUB OFF");
+    } else {
+      if (isLooperOn) {
+        midiA.sendControlChange(MIDI_CC_LOOP_TOGGLE, 0, MIDI_CH);
+        isLooperOn = false;
+        Serial.println("Looper: OFF");
+      } else {
+        midiA.sendControlChange(MIDI_CC_LOOP_TOGGLE, 127, MIDI_CH);
+        isLooperOn = true;
+        Serial.println("Looper: ON");
+      }
+    }
+    isLooperPressing = false;
+  }
+
+  // Potentiometer.
+  if (pot.hasChanged()) {
+    int value = pot.getValue();
+    int midiValue = map(value, 0, 1023, 0, 127);
+    midiA.sendControlChange(MIDI_CC_MIX, midiValue, MIDI_CH);
+    Serial.println(midiValue);
+  }
+}
