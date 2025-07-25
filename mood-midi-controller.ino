@@ -4,7 +4,6 @@
 #include <ResponsiveAnalogRead.h>  // Ref: https://github.com/dxinteractive/ResponsiveAnalogRead
 #include <jled.h>                  // Ref: https://github.com/jandelgado/jled
 
-
 // Define MIDI Channel and control change numbers.
 const int MIDI_CH = 2; // MOOD MKII Default Channel
 
@@ -75,19 +74,20 @@ void loop() {
   footSwitchLooper.read();
   pot.update();
 
-  // Toggle Switches.
+  // Toggle Switch - Bounce.
   if (toggleBounce.wasPressed()) {
     midiA.sendControlChange(MIDI_CC_TOGGLE_BOUNCE, 127, MIDI_CH);
     Serial.println("Toggle Bounce: ON");
   }
-  if (toggleSmooth.wasPressed()) {
-    midiA.sendControlChange(MIDI_CC_TOGGLE_SMOOTH, 127, MIDI_CH);
-    Serial.println("Toggle Smooth: ON");
-  }
-
   if (toggleBounce.wasReleased()) {
     midiA.sendControlChange(MIDI_CC_TOGGLE_BOUNCE, 0, MIDI_CH);
     Serial.println("Toggle Bounce: OFF");
+  }
+
+  // Toggle Switch - Smooth.
+  if (toggleSmooth.wasPressed()) {
+    midiA.sendControlChange(MIDI_CC_TOGGLE_SMOOTH, 127, MIDI_CH);
+    Serial.println("Toggle Smooth: ON");
   }
   if (toggleSmooth.wasReleased()) {
     midiA.sendControlChange(MIDI_CC_TOGGLE_SMOOTH, 0, MIDI_CH);
@@ -183,6 +183,7 @@ void loop() {
     int value = pot.getValue();
     int midiValue = map(value, 0, 1023, 0, 127);
     midiA.sendControlChange(MIDI_CC_MIX, midiValue, MIDI_CH);
+    Serial.print("Pot Value: ");
     Serial.println(midiValue);
   }
 
