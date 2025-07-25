@@ -68,13 +68,8 @@ void setup() {
 }
 
 void loop() {
-  toggleBounce.read();
-  toggleSmooth.read();
-  footSwitchWet.read();
-  footSwitchLooper.read();
-  pot.update();
-
   // Toggle Switch - Bounce.
+  toggleBounce.read();
   if (toggleBounce.wasPressed()) {
     midiA.sendControlChange(MIDI_CC_TOGGLE_BOUNCE, 127, MIDI_CH);
     Serial.println("Toggle Bounce: ON");
@@ -85,6 +80,7 @@ void loop() {
   }
 
   // Toggle Switch - Smooth.
+  toggleSmooth.read();
   if (toggleSmooth.wasPressed()) {
     midiA.sendControlChange(MIDI_CC_TOGGLE_SMOOTH, 127, MIDI_CH);
     Serial.println("Toggle Smooth: ON");
@@ -95,6 +91,7 @@ void loop() {
   }
 
   // Wet Channel - Pressed.
+  footSwitchWet.read();
   if (footSwitchWet.wasPressed()) {
     isWetPressing = true;
     wetPressStartTime = millis();
@@ -140,6 +137,7 @@ void loop() {
   }
 
   // Micro Looper - Pressed.
+  footSwitchLooper.read();
   if (footSwitchLooper.wasPressed()) {
     isLooperPressing = true;
     looperPressStartTime = millis();
@@ -179,6 +177,7 @@ void loop() {
   }
 
   // Potentiometer.
+  pot.update();
   if (pot.hasChanged()) {
     int value = pot.getValue();
     int midiValue = map(value, 0, 1023, 0, 127);
