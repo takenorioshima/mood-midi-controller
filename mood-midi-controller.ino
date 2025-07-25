@@ -2,10 +2,11 @@
 #include <MIDI.h>                  // Ref: https://github.com/FortySevenEffects/arduino_midi_library
 #include <JC_Button.h>             // Ref: https://github.com/JChristensen/JC_Button
 #include <ResponsiveAnalogRead.h>  // Ref: https://github.com/dxinteractive/ResponsiveAnalogRead
+#include <jled.h>                  // Ref: https://github.com/jandelgado/jled
 
 
 // Define MIDI Channel and control change numbers.
-const int MIDI_CH = 2;  // MOOD MKII Default Channel
+const int MIDI_CH = 2; // MOOD MKII Default Channel
 
 const int MIDI_CC_TOGGLE_BOUNCE = 66;
 const int MIDI_CC_TOGGLE_SMOOTH = 78;
@@ -24,7 +25,8 @@ const int PIN_FOOTSWITCH_LOOPER = 7;
 const int PIN_POT = A0;
 const int PIN_RX = 2;
 const int PIN_TX = 3;
-const int PIN_LED = 13;
+const int PIN_WET_LED = 9;
+const int PIN_LOOPER_LED = 10;
 
 // Setup switches.
 Button toggleBounce(PIN_TOGGLE_BOUNCE);
@@ -48,13 +50,15 @@ bool isLooperHoldTriggered = false;
 // Setup potentiometer.
 ResponsiveAnalogRead pot(PIN_POT, true);
 
+// Setup LEDs.
+JLed ledWet = JLed(PIN_WET_LED);
+JLed ledLooper = JLed(PIN_LOOPER_LED);
+
 // Setup MIDI.
 SoftwareSerial softSerial(PIN_RX, PIN_TX);
 MIDI_CREATE_INSTANCE(SoftwareSerial, softSerial, midiA);
 
 void setup() {
-  pinMode(PIN_LED, OUTPUT);
-
   toggleBounce.begin();
   toggleSmooth.begin();
   footSwitchWet.begin();
@@ -102,6 +106,7 @@ void loop() {
     if (!isWetHoldTriggered && (millis() - wetPressStartTime > holdThresholdMs)) {
       if (isWetOn) {
         midiA.sendControlChange(MIDI_CC_WET_HOLD, 127, MIDI_CH);
+        ledWet = JLed(PIN_WET_LED).Breathe(500).Forever();
         Serial.println("Wet Hold: ON");
       }
       isWetHoldTriggered = true;
@@ -113,14 +118,17 @@ void loop() {
     if (isWetOn) {
       if (isWetHoldTriggered) {
         midiA.sendControlChange(MIDI_CC_WET_HOLD, 0, MIDI_CH);
+        ledWet = JLed(PIN_WET_LED).On();
         Serial.println("Wet Hold: OFF");
       } else {
         midiA.sendControlChange(MIDI_CC_WET_TOGGLE, 0, MIDI_CH);
+        ledWet = JLed(PIN_WET_LED).Off();
         isWetOn = false;
         Serial.println("Wet: OFF");
       }
     } else {
       midiA.sendControlChange(MIDI_CC_WET_TOGGLE, 127, MIDI_CH);
+      ledWet = JLed(PIN_WET_LED).On();
       isWetOn = true;
       if (isWetHoldTriggered) {
         Serial.println("Wet: ON (from long press)");
@@ -142,6 +150,7 @@ void loop() {
   if (isLooperPressing && footSwitchLooper.isPressed()) {
     if (!isLooperHoldTriggered && (millis() - looperPressStartTime > holdThresholdMs)) {
       midiA.sendControlChange(MIDI_CC_LOOP_HOLD, 127, MIDI_CH);
+      ledLooper = JLed(PIN_LOOPER_LED).Breathe(500).Forever();
       Serial.println("Looper: OVERDUB ON");
       isLooperHoldTriggered = true;
     }
@@ -151,14 +160,17 @@ void loop() {
   if (footSwitchLooper.wasReleased()) {
     if (isLooperHoldTriggered) {
       midiA.sendControlChange(MIDI_CC_LOOP_HOLD, 0, MIDI_CH);
+      ledLooper = JLed(PIN_LOOPER_LED).On();
       Serial.println("Looper: OVERDUB OFF");
     } else {
       if (isLooperOn) {
         midiA.sendControlChange(MIDI_CC_LOOP_TOGGLE, 0, MIDI_CH);
+        ledLooper = JLed(PIN_LOOPER_LED).Off();
         isLooperOn = false;
         Serial.println("Looper: OFF");
       } else {
         midiA.sendControlChange(MIDI_CC_LOOP_TOGGLE, 127, MIDI_CH);
+        ledLooper = JLed(PIN_LOOPER_LED).On();
         isLooperOn = true;
         Serial.println("Looper: ON");
       }
@@ -173,4 +185,8 @@ void loop() {
     midiA.sendControlChange(MIDI_CC_MIX, midiValue, MIDI_CH);
     Serial.println(midiValue);
   }
+
+  // Update led.
+  ledWet.Update();
+  ledLooper.Update();
 }
