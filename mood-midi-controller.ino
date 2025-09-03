@@ -30,11 +30,11 @@ const int PIN_LOOPER_LED = 10;
 // Setup switches.
 Button toggleBounce(PIN_TOGGLE_BOUNCE);
 Button toggleSmooth(PIN_TOGGLE_SMOOTH);
-Button footSwitchWet(PIN_FOOTSWITCH_WET);
-Button footSwitchLooper(PIN_FOOTSWITCH_LOOPER);
+Button footSwitchWet(PIN_FOOTSWITCH_WET, 50);
+Button footSwitchLooper(PIN_FOOTSWITCH_LOOPER, 50);
 
 // Footswitch States.
-const unsigned long holdThresholdMs = 200;
+const unsigned long holdThresholdMs = 500;
 
 bool isWetOn = false;
 bool isWetPressing = false;
