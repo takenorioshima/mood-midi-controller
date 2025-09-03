@@ -5,16 +5,16 @@
 #include <jled.h>                  // Ref: https://github.com/jandelgado/jled
 
 // Define MIDI Channel and control change numbers.
-const int MIDI_CH = 2; // MOOD MKII Default Channel
+const int MIDI_CH = 2;  // MOOD MKII Default Channel
 
 const int MIDI_CC_TOGGLE_BOUNCE = 66;
 const int MIDI_CC_TOGGLE_SMOOTH = 78;
 const int MIDI_CC_MIX = 15;
 
 const int MIDI_CC_WET_TOGGLE = 103;
-const int MIDI_CC_WET_HOLD   = 105;
+const int MIDI_CC_WET_HOLD = 105;
 const int MIDI_CC_LOOP_TOGGLE = 102;
-const int MIDI_CC_LOOP_HOLD   = 106;
+const int MIDI_CC_LOOP_HOLD = 106;
 
 // Pin Definitions.
 const int PIN_TOGGLE_BOUNCE = 4;
@@ -182,8 +182,8 @@ void loop() {
     int value = pot.getValue();
     int midiValue = map(value, 0, 1023, 0, 127);
     midiA.sendControlChange(MIDI_CC_MIX, midiValue, MIDI_CH);
-    Serial.print("Pot Value: ");
-    Serial.println(midiValue);
+    // Serial.print("Pot Value: ");
+    // Serial.println(midiValue);
   }
 
   // Update led.
