@@ -156,7 +156,10 @@ void loop() {
 
   // Micro Looper - Released.
   if (footSwitchLooper.wasReleased()) {
-    if (isLooperHoldTriggered) {
+    if (isLooperHoldTriggered && !isLooperOn) {
+      midiA.sendControlChange(MIDI_CC_LOOP_TOGGLE, 0, MIDI_CH);
+      ledLooper = JLed(PIN_LOOPER_LED).Off();
+    } else if (isLooperHoldTriggered) {
       midiA.sendControlChange(MIDI_CC_LOOP_HOLD, 0, MIDI_CH);
       ledLooper = JLed(PIN_LOOPER_LED).On();
       Serial.println("Looper: OVERDUB OFF");
